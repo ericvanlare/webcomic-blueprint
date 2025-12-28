@@ -1,0 +1,153 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Admin Panel">
+  <h1>Admin Panel</h1>
+  <p style="color: #666; margin-bottom: 2rem;">
+    Manage your webcomic. In production, this page will be protected by
+    Cloudflare Access.
+  </p>
+
+  <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px;">
+    <button
+      id="btn-upload"
+      style="padding: 1rem; font-size: 1rem; cursor: pointer; background: #0066cc; color: white; border: none; border-radius: 4px;"
+    >
+      📤 Upload New Comic
+    </button>
+
+    <button
+      id="btn-modify"
+      style="padding: 1rem; font-size: 1rem; cursor: pointer; background: #4a9eff; color: white; border: none; border-radius: 4px;"
+    >
+      ✏️ Modify Comic
+    </button>
+
+    <button
+      id="btn-ai"
+      style="padding: 1rem; font-size: 1rem; cursor: pointer; background: #9b59b6; color: white; border: none; border-radius: 4px;"
+    >
+      🤖 Modify Site with AI
+    </button>
+  </div>
+
+  <div
+    id="upload-form"
+    style="display: none; margin-top: 2rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;"
+  >
+    <h2>Upload New Comic</h2>
+    <form id="comic-form" style="display: flex; flex-direction: column; gap: 1rem;">
+      <label>
+        Title:
+        <input type="text" name="title" required style="width: 100%; padding: 0.5rem;" />
+      </label>
+      <label>
+        Slug:
+        <input type="text" name="slug" required style="width: 100%; padding: 0.5rem;" />
+      </label>
+      <label>
+        Image:
+        <input type="file" name="image" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" required />
+      </label>
+      <label>
+        Alt Text:
+        <input type="text" name="altText" style="width: 100%; padding: 0.5rem;" />
+      </label>
+      <label>
+        Transcript:
+        <textarea name="transcript" rows="4" style="width: 100%; padding: 0.5rem;"></textarea>
+      </label>
+      <button type="submit" style="padding: 0.75rem; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Submit
+      </button>
+    </form>
+    <div id="form-result" style="margin-top: 1rem;"></div>
+  </div>
+
+  <div
+    id="modify-placeholder"
+    style="display: none; margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 4px;"
+  >
+    <p>🚧 Modify Comic UI - Coming in Phase 2</p>
+  </div>
+
+  <div
+    id="ai-placeholder"
+    style="display: none; margin-top: 2rem; padding: 1rem; background: #e7d4f5; border-radius: 4px;"
+  >
+    <p>🤖 AI Site Modification - Coming in Phase 2</p>
+  </div>
+
+  <script>
+    const uploadBtn = document.getElementById('btn-upload');
+    const modifyBtn = document.getElementById('btn-modify');
+    const aiBtn = document.getElementById('btn-ai');
+    const uploadForm = document.getElementById('upload-form');
+    const modifyPlaceholder = document.getElementById('modify-placeholder');
+    const aiPlaceholder = document.getElementById('ai-placeholder');
+
+    function hideAll() {
+      uploadForm!.style.display = 'none';
+      modifyPlaceholder!.style.display = 'none';
+      aiPlaceholder!.style.display = 'none';
+    }
+
+    uploadBtn?.addEventListener('click', () => {
+      hideAll();
+      uploadForm!.style.display = 'block';
+    });
+
+    modifyBtn?.addEventListener('click', () => {
+      hideAll();
+      modifyPlaceholder!.style.display = 'block';
+    });
+
+    aiBtn?.addEventListener('click', () => {
+      hideAll();
+      aiPlaceholder!.style.display = 'block';
+    });
+
+    // Form submission
+    const form = document.getElementById('comic-form') as HTMLFormElement;
+    const resultDiv = document.getElementById('form-result');
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      
+      // Build JSON metadata
+      const metadata = {
+        title: formData.get('title'),
+        slug: formData.get('slug'),
+        altText: formData.get('altText'),
+        transcript: formData.get('transcript'),
+      };
+      
+      // Create multipart form with json + image
+      const submitData = new FormData();
+      submitData.append('json', JSON.stringify(metadata));
+      submitData.append('image', formData.get('image') as File);
+      
+      resultDiv!.innerHTML = 'Uploading...';
+      
+      try {
+        // TODO: Replace with actual worker URL from env
+        const workerUrl = (window as any).WORKER_API_URL || 'http://localhost:8787';
+        const response = await fetch(`${workerUrl}/api/comics`, {
+          method: 'POST',
+          body: submitData,
+        });
+        const result = await response.json();
+        if (result.success) {
+          resultDiv!.innerHTML = `<span style="color: green;">✓ Comic created! ID: ${result.data._id}</span>`;
+          form.reset();
+        } else {
+          resultDiv!.innerHTML = `<span style="color: red;">✗ Error: ${result.error}</span>`;
+        }
+      } catch (err) {
+        resultDiv!.innerHTML = `<span style="color: red;">✗ Network error: ${err}</span>`;
+      }
+    });
+  </script>
+</BaseLayout>

@@ -1,0 +1,13 @@
+name = "webcomic-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# Local dev vars - NEVER put real secrets here
+# Use `wrangler secret put` for production or .dev.vars for local dev
+[vars]
+ADMIN_ORIGIN = "http://localhost:4321"
+
+# For local development, create a .dev.vars file with:
+# SANITY_PROJECT_ID=your_project_id
+# SANITY_DATASET=production
+# SANITY_WRITE_TOKEN=your_write_token

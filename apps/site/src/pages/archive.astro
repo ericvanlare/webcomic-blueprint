@@ -1,0 +1,28 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getArchive } from '@/lib/sanity';
+
+const comics = await getArchive();
+---
+
+<BaseLayout title="Comic Archive">
+  <h1>Archive</h1>
+  {
+    comics.length > 0 ? (
+      <ul class="archive-list">
+        {comics.map((comic) => (
+          <li>
+            <a href={`/comic/${comic.slug.current}`}>
+              <strong>{comic.title}</strong>
+            </a>
+            <span class="comic-meta" style="margin-left: 1rem;">
+              {new Date(comic.publishedAt).toLocaleDateString()}
+            </span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p>No comics in the archive yet.</p>
+    )
+  }
+</BaseLayout>

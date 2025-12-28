@@ -1,0 +1,6 @@
+{
+  "name": "sanity-schema",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Sanity schema definitions for webcomic blueprint"
+}

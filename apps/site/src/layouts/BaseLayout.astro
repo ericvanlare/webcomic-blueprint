@@ -1,0 +1,86 @@
+---
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <style is:global>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        line-height: 1.6;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
+        background: #fafafa;
+        color: #333;
+      }
+      a {
+        color: #0066cc;
+      }
+      nav {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 2rem;
+      }
+      nav a {
+        text-decoration: none;
+        font-weight: 500;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+      h1 {
+        margin-bottom: 1rem;
+      }
+      .comic-image {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .comic-meta {
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0.5rem 0;
+      }
+      .archive-list {
+        list-style: none;
+      }
+      .archive-list li {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eee;
+      }
+      .archive-list a {
+        text-decoration: none;
+      }
+      .archive-list a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/">Latest</a>
+      <a href="/archive">Archive</a>
+      <a href="/admin">Admin</a>
+    </nav>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>

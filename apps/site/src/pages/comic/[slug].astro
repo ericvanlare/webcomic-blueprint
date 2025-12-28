@@ -1,0 +1,43 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getComicBySlug } from '@/lib/sanity';
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/');
+}
+
+const comic = await getComicBySlug(slug);
+
+if (!comic) {
+  return new Response('Comic not found', { status: 404 });
+}
+---
+
+<BaseLayout title={comic.title}>
+  <article>
+    <h1>{comic.title}</h1>
+    <p class="comic-meta">
+      Published: {new Date(comic.publishedAt).toLocaleDateString()}
+    </p>
+    <img
+      src={comic.imageUrl}
+      alt={comic.altText || comic.title}
+      class="comic-image"
+    />
+    {
+      comic.transcript && (
+        <details style="margin-top: 1rem;">
+          <summary>Transcript</summary>
+          <pre style="white-space: pre-wrap; background: #f5f5f5; padding: 1rem; margin-top: 0.5rem; border-radius: 4px;">
+            {comic.transcript}
+          </pre>
+        </details>
+      )
+    }
+    <p style="margin-top: 1rem;">
+      <a href="/">&larr; Latest</a> | <a href="/archive">Archive</a>
+    </p>
+  </article>
+</BaseLayout>
