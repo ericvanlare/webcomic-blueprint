@@ -175,7 +175,7 @@ async function handleCreateComic(
     );
   }
 
-  if (!imageFile || !(imageFile instanceof File)) {
+  if (!imageFile || typeof imageFile === 'string') {
     return jsonResponse(
       { success: false, error: 'Missing image file in form data' },
       400,
@@ -183,9 +183,11 @@ async function handleCreateComic(
     );
   }
 
+  const file = imageFile as unknown as { name: string; size: number; type: string; arrayBuffer(): Promise<ArrayBuffer> };
+
   // Validate image
   const imageError = validateImageFile(
-    { size: imageFile.size, type: imageFile.type },
+    { size: file.size, type: file.type },
     'image'
   );
   if (imageError) {
@@ -213,7 +215,8 @@ async function handleCreateComic(
 
   try {
     // Upload image first
-    const asset = await uploadImageToSanity(env, imageFile, imageFile.name);
+    const imageBlob = new Blob([await file.arrayBuffer()], { type: file.type });
+    const asset = await uploadImageToSanity(env, imageBlob, file.name);
 
     // Create document
     const doc = await createComicDocument(env, data, asset._id);
@@ -238,12 +241,13 @@ async function handlePatchComic(
   const contentType = request.headers.get('Content-Type') || '';
 
   let data: PatchComicBody;
-  let imageFile: File | null = null;
+  type FileData = { name: string; size: number; type: string; arrayBuffer(): Promise<ArrayBuffer> };
+  let imageFileData: FileData | null = null;
 
   if (contentType.includes('multipart/form-data')) {
     const formData = await request.formData();
     const jsonStr = formData.get('json');
-    imageFile = formData.get('image') as File | null;
+    const rawImageFile = formData.get('image');
 
     if (!jsonStr || typeof jsonStr !== 'string') {
       return jsonResponse(
@@ -263,9 +267,10 @@ async function handlePatchComic(
       );
     }
 
-    if (imageFile) {
+    if (rawImageFile && typeof rawImageFile !== 'string') {
+      imageFileData = rawImageFile as unknown as FileData;
       const imageError = validateImageFile(
-        { size: imageFile.size, type: imageFile.type },
+        { size: imageFileData!.size, type: imageFileData!.type },
         'image'
       );
       if (imageError) {
@@ -292,8 +297,9 @@ async function handlePatchComic(
 
   try {
     let newImageAssetId: string | undefined;
-    if (imageFile) {
-      const asset = await uploadImageToSanity(env, imageFile, imageFile.name);
+    if (imageFileData) {
+      const imageBlob = new Blob([await imageFileData.arrayBuffer()], { type: imageFileData.type });
+      const asset = await uploadImageToSanity(env, imageBlob, imageFileData.name);
       newImageAssetId = asset._id;
     }
 
