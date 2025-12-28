@@ -8,4 +8,10 @@ export default defineConfig({
       enabled: true,
     },
   }),
+  // Use memory driver to avoid KV binding requirement for sessions
+  // The Cloudflare adapter auto-enables KV sessions by default which
+  // requires creating a KV namespace - this bypasses that requirement
+  session: {
+    driver: 'memory',
+  },
 });

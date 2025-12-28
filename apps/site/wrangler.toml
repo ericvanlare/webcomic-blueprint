@@ -1,0 +1,7 @@
+name = "webcomic-site"
+compatibility_date = "2024-12-01"
+pages_build_output_dir = "./dist"
+
+[vars]
+# Environment variables are set via Cloudflare dashboard or wrangler secret put
+# SANITY_PROJECT_ID, SANITY_DATASET, SANITY_API_VERSION
