@@ -4,151 +4,86 @@ A monorepo template for building webcomic websites with:
 - **Astro** - Static site generation with SSR support
 - **Cloudflare Pages** - Hosting for the public site
 - **Cloudflare Workers** - API for admin operations
-- **Sanity** - Headless CMS for comic storage and asset management
+- **Sanity** - Headless CMS for comic storage and management
+- **Sanity Studio** - Web UI for creating and editing comics
+
+## Quick Start
+
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/ericvanlare/webcomic-blueprint.git my-webcomic
+cd my-webcomic
+pnpm install
+```
+
+### 2. Set Up Sanity
+
+1. Go to [sanity.io/manage](https://sanity.io/manage) and create a new project
+2. Note your **Project ID** (looks like `abc123xy`)
+3. Create an API token with **Editor** permissions
+
+### 3. Configure Sanity Studio
+
+Edit these files with your Project ID:
+- `sanity-studio/sanity.config.ts` - Replace `YOUR_PROJECT_ID`
+- `sanity-studio/sanity.cli.ts` - Replace `YOUR_PROJECT_ID`
+
+### 4. Configure Environment
+
+```bash
+# Site env
+cp apps/site/.env.example apps/site/.env
+# Edit apps/site/.env with your SANITY_PROJECT_ID
+
+# Worker env (for local dev)
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars
+# Edit apps/worker/.dev.vars with your Sanity credentials
+```
+
+### 5. Build and Run
+
+```bash
+# Build shared types (required first time)
+pnpm --filter @webcomic/shared build
+
+# Start dev servers
+pnpm dev
+```
+
+This starts:
+- Astro site at `http://localhost:4321`
+- Worker API at `http://localhost:8787`
+
+### 6. Run Sanity Studio
+
+```bash
+cd sanity-studio
+npm install
+npm run dev
+```
+
+Opens at `http://localhost:3333` - use this to create your first comic!
+
+---
 
 ## Repository Structure
 
 ```
 webcomic-blueprint/
 ├── apps/
-│   ├── site/          # Astro site (public + admin UI)
-│   └── worker/        # Cloudflare Worker API
+│   ├── site/           # Astro site (public pages + admin UI)
+│   └── worker/         # Cloudflare Worker API
 ├── packages/
-│   └── shared/        # Shared TypeScript types
-├── sanity/            # Sanity schema definitions
-├── test-assets/       # Sample images for testing
+│   └── shared/         # Shared TypeScript types
+├── sanity/             # Schema reference docs
+├── sanity-studio/      # Sanity Studio (content management UI)
+├── test-assets/        # Sample images for testing
+├── DEPLOY.md           # Production deployment guide
 └── README.md
 ```
 
-## Prerequisites
-
-- Node.js >= 20
-- pnpm >= 9
-- A Sanity account ([sanity.io](https://sanity.io))
-- A Cloudflare account (for deployment)
-
-## Environment Variables
-
-### Site (apps/site/.env)
-
-```bash
-SANITY_PROJECT_ID=your_project_id
-SANITY_DATASET=production
-SANITY_API_VERSION=2024-01-01
-```
-
-### Worker (apps/worker/.dev.vars)
-
-```bash
-SANITY_PROJECT_ID=your_project_id
-SANITY_DATASET=production
-SANITY_WRITE_TOKEN=your_write_token
-ADMIN_ORIGIN=http://localhost:4321
-```
-
-## Setup
-
-### 1. Clone and Install
-
-```bash
-git clone <repo-url>
-cd webcomic-blueprint
-pnpm install
-```
-
-### 2. Set Up Sanity
-
-1. Go to [sanity.io/manage](https://sanity.io/manage)
-2. Create a new project
-3. Note your **Project ID**
-4. Create an API token with **Editor** permissions
-5. See [sanity/README.md](sanity/README.md) for schema setup
-
-### 3. Configure Environment
-
-```bash
-# Site env
-cp apps/site/.env.example apps/site/.env
-# Edit with your Sanity project ID
-
-# Worker env
-cp apps/worker/.dev.vars.example apps/worker/.dev.vars
-# Edit with your Sanity credentials
-```
-
-### 4. Build Shared Package
-
-```bash
-pnpm --filter @webcomic/shared build
-```
-
-## Local Development
-
-Run both the site and worker concurrently:
-
-```bash
-pnpm dev
-```
-
-This starts:
-- Astro dev server at `http://localhost:4321`
-- Worker dev server at `http://localhost:8787`
-
-## API Endpoints
-
-### POST /api/comics
-
-Create a new comic episode.
-
-**Request:** `multipart/form-data`
-- `json` - JSON string with comic metadata
-- `image` - Image file (png/jpg/webp/gif/avif, max 40MB)
-
-**Example with curl:**
-
-```bash
-curl -X POST http://localhost:8787/api/comics \
-  -F 'json={"title":"Episode 1","slug":"episode-1","altText":"First comic"}' \
-  -F 'image=@test-assets/sample-comic.png'
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": { "_id": "abc123..." }
-}
-```
-
-### PATCH /api/comics/:id
-
-Update an existing comic episode.
-
-**Request:** `application/json` or `multipart/form-data`
-
-**Example with curl (JSON only):**
-
-```bash
-curl -X PATCH http://localhost:8787/api/comics/abc123 \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Updated Title"}'
-```
-
-**Example with curl (with new image):**
-
-```bash
-curl -X PATCH http://localhost:8787/api/comics/abc123 \
-  -F 'json={"title":"Updated Title"}' \
-  -F 'image=@new-image.png'
-```
-
-### GET /health
-
-Health check endpoint.
-
-```bash
-curl http://localhost:8787/health
-```
+---
 
 ## Site Routes
 
@@ -157,53 +92,80 @@ curl http://localhost:8787/health
 | `/` | Latest comic |
 | `/comic/[slug]` | Single comic by slug |
 | `/archive` | List of all comics |
-| `/admin` | Admin panel (protected in production) |
+| `/admin` | Admin panel (protect with Cloudflare Access in production) |
 
-## Deployment
+---
 
-### Deploy Site to Cloudflare Pages
+## Creating Comics
 
+### Option 1: Sanity Studio (Recommended)
+1. Run `npm run dev` in `sanity-studio/`
+2. Open http://localhost:3333
+3. Create a new Comic Episode with title, image, slug, etc.
+
+### Option 2: API (Programmatic)
 ```bash
-cd apps/site
-pnpm build
-# Deploy dist/ to Cloudflare Pages
+curl -X POST http://localhost:8787/api/comics \
+  -F 'json={"title":"Episode 1","slug":"episode-1","altText":"First comic"}' \
+  -F 'image=@path/to/comic.png'
 ```
 
-### Deploy Worker
+---
 
+## Production Deployment
+
+See [DEPLOY.md](./DEPLOY.md) for full deployment instructions including:
+- Deploying the Worker API to Cloudflare Workers
+- Deploying the Site to Cloudflare Pages
+- Deploying Sanity Studio
+- Setting up Cloudflare Access for admin protection
+
+---
+
+## Environment Variables Reference
+
+### Site (apps/site/.env)
 ```bash
-cd apps/worker
-# Set production secrets
-wrangler secret put SANITY_PROJECT_ID
-wrangler secret put SANITY_DATASET
-wrangler secret put SANITY_WRITE_TOKEN
-wrangler secret put ADMIN_ORIGIN
-
-# Deploy
-pnpm deploy
+SANITY_PROJECT_ID=your_project_id
+SANITY_DATASET=production
+SANITY_API_VERSION=2024-01-01
 ```
 
-## Smoke Test
+### Worker (apps/worker/.dev.vars)
+```bash
+SANITY_PROJECT_ID=your_project_id
+SANITY_DATASET=production
+SANITY_WRITE_TOKEN=your_write_token
+ADMIN_ORIGIN=http://localhost:4321
+```
 
-After setting up locally:
+---
 
-1. Start dev servers: `pnpm dev`
-2. Create a comic:
-   ```bash
-   curl -X POST http://localhost:8787/api/comics \
-     -F 'json={"title":"Test Comic","slug":"test-comic","altText":"A test"}' \
-     -F 'image=@test-assets/sample-comic.png'
-   ```
-3. Visit `http://localhost:4321` - should show the comic
-4. Visit `http://localhost:4321/archive` - should list it
-5. Visit `http://localhost:4321/comic/test-comic` - should show it
+## API Endpoints
 
-## Phase 2 (Coming Soon)
+### POST /api/comics
+Create a new comic. Multipart form with `json` (metadata) and `image` file.
 
-- Cloudflare Access for admin protection
-- PR preview deployments
-- AI-powered site modifications
-- Provisioning automation
+### PATCH /api/comics/:id  
+Update an existing comic. JSON body or multipart with new image.
+
+### GET /health
+Health check endpoint.
+
+---
+
+## Troubleshooting
+
+### 500 Error on Cloudflare Pages
+The template includes `session: { driver: 'memory' }` in astro.config.mjs to avoid Cloudflare KV binding requirements.
+
+### svgo/css-tree errors
+Ensure Astro is pinned to `^5.0.0` not `latest` in apps/site/package.json.
+
+### CORS errors on admin uploads
+Ensure `ADMIN_ORIGIN` matches your Pages URL exactly (including `https://`).
+
+---
 
 ## License
 
