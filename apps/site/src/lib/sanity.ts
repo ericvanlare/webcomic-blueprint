@@ -1,15 +1,20 @@
 import { createClient, type SanityClient } from '@sanity/client';
 import imageUrlBuilder from '@sanity/image-url';
 import type { Comic, ComicWithImageUrl } from '@webcomic/shared';
+import {
+  SANITY_PROJECT_ID,
+  SANITY_DATASET,
+  SANITY_API_VERSION,
+} from 'astro:env/server';
 
 let client: SanityClient | null = null;
 
 export function getSanityClient(): SanityClient {
   if (!client) {
     client = createClient({
-      projectId: import.meta.env.SANITY_PROJECT_ID,
-      dataset: import.meta.env.SANITY_DATASET || 'production',
-      apiVersion: import.meta.env.SANITY_API_VERSION || '2024-01-01',
+      projectId: SANITY_PROJECT_ID,
+      dataset: SANITY_DATASET,
+      apiVersion: SANITY_API_VERSION,
       useCdn: true,
     });
   }
@@ -17,8 +22,8 @@ export function getSanityClient(): SanityClient {
 }
 
 const builder = imageUrlBuilder({
-  projectId: import.meta.env.SANITY_PROJECT_ID || '',
-  dataset: import.meta.env.SANITY_DATASET || 'production',
+  projectId: SANITY_PROJECT_ID,
+  dataset: SANITY_DATASET,
 });
 
 export function urlFor(source: Comic['image']): string {

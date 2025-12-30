@@ -1,0 +1,8 @@
+# Cloudflare Pages runtime environment variables
+# Copy this file to .dev.vars and fill in your values
+# .dev.vars is read by wrangler/platformProxy for local development
+
+SANITY_PROJECT_ID=your_project_id
+SANITY_DATASET=production
+SANITY_API_VERSION=2024-01-01
+PUBLIC_WORKER_URL=http://localhost:8787
