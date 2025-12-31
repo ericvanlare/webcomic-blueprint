@@ -16,7 +16,7 @@ function corsHeaders(origin: string, adminOrigin: string): HeadersInit {
   const allowedOrigin = origin === adminOrigin ? adminOrigin : '';
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 }
@@ -118,6 +118,7 @@ async function patchComicDocument(
   if (data.publishedAt !== undefined) set.publishedAt = data.publishedAt;
   if (data.altText !== undefined) set.altText = data.altText;
   if (data.transcript !== undefined) set.transcript = data.transcript;
+  if (data.hidden !== undefined) set.hidden = data.hidden;
   if (newImageAssetId) {
     set.image = {
       _type: 'image',
@@ -146,6 +147,35 @@ async function patchComicDocument(
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Failed to patch document: ${response.status} ${text}`);
+  }
+}
+
+async function deleteComicDocument(
+  env: Env,
+  documentId: string
+): Promise<void> {
+  const url = `https://${env.SANITY_PROJECT_ID}.api.sanity.io/v2024-01-01/data/mutate/${env.SANITY_DATASET}`;
+
+  const mutations = [
+    {
+      delete: {
+        id: documentId,
+      },
+    },
+  ];
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.SANITY_WRITE_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ mutations }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to delete document: ${response.status} ${text}`);
   }
 }
 
@@ -316,6 +346,24 @@ async function handlePatchComic(
   }
 }
 
+async function handleDeleteComic(
+  env: Env,
+  documentId: string,
+  cors: HeadersInit
+): Promise<Response> {
+  try {
+    await deleteComicDocument(env, documentId);
+    return jsonResponse({ success: true, data: { _id: documentId, deleted: true } }, 200, cors);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return jsonResponse(
+      { success: false, error: 'Failed to delete comic', details: message },
+      500,
+      cors
+    );
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -336,6 +384,12 @@ export default {
     const patchMatch = url.pathname.match(/^\/api\/comics\/([^/]+)$/);
     if (patchMatch && request.method === 'PATCH') {
       return handlePatchComic(request, env, patchMatch[1], cors);
+    }
+
+    // Route: DELETE /api/comics/:id
+    const deleteMatch = url.pathname.match(/^\/api\/comics\/([^/]+)$/);
+    if (deleteMatch && request.method === 'DELETE') {
+      return handleDeleteComic(env, deleteMatch[1], cors);
     }
 
     // Health check

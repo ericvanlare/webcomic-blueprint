@@ -87,6 +87,13 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
   >
     <h2>Modify Comic</h2>
     
+    <div style="margin-bottom: 1rem;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+        <input type="checkbox" id="show-hidden-toggle" />
+        Show hidden comics only
+      </label>
+    </div>
+    
     <div id="comic-selector" style="margin-bottom: 1rem;">
       <label>
         Select Comic:
@@ -101,6 +108,9 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
       
       <div style="background: #f0f0f0; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem;">
         <img id="modify-preview" src="" alt="Current comic" style="max-width: 200px; max-height: 150px; display: none;" />
+        <div id="hidden-badge" style="display: none; margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #ffc107; color: #000; border-radius: 4px; font-size: 0.8rem; width: fit-content;">
+          🙈 Hidden
+        </div>
       </div>
       
       <label>
@@ -123,11 +133,36 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
         Transcript:
         <textarea name="transcript" id="modify-transcript" rows="4" style="width: 100%; padding: 0.5rem;"></textarea>
       </label>
-      <button type="submit" style="padding: 0.75rem; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-        Save Changes
-      </button>
+      
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button type="submit" style="padding: 0.75rem 1rem; background: #4a9eff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          💾 Save Changes
+        </button>
+        <button type="button" id="btn-toggle-hide" style="padding: 0.75rem 1rem; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer;">
+          🙈 Hide
+        </button>
+        <button type="button" id="btn-delete" style="padding: 0.75rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          🗑️ Delete
+        </button>
+      </div>
     </form>
     <div id="modify-result" style="margin-top: 1rem;"></div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 400px; margin: 1rem;">
+      <h3 style="margin-bottom: 1rem; color: #dc3545;">⚠️ Delete Comic Permanently?</h3>
+      <p style="margin-bottom: 1rem;">This action cannot be undone. The comic "<span id="delete-comic-title"></span>" will be permanently removed from Sanity.</p>
+      <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button id="delete-cancel" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Cancel
+        </button>
+        <button id="delete-confirm" style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Delete Forever
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- AI Placeholder -->
@@ -135,7 +170,7 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
     id="ai-placeholder"
     style="display: none; margin-top: 2rem; padding: 1rem; background: #e7d4f5; border-radius: 4px;"
   >
-    <p>🤖 AI Site Modification - Coming soon</p>
+    <p>🤖 AI Site Modification - Coming in Phase 3</p>
   </div>
 
   <script define:vars={{ workerUrl }}>
@@ -208,6 +243,13 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
 
     // Modify comic functionality
     let comicsCache = [];
+    let showHiddenOnly = false;
+    
+    const showHiddenToggle = document.getElementById('show-hidden-toggle');
+    showHiddenToggle?.addEventListener('change', (e) => {
+      showHiddenOnly = e.target.checked;
+      updateComicSelect();
+    });
     
     async function loadComics() {
       const select = document.getElementById('comic-select');
@@ -216,13 +258,7 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
         const result = await response.json();
         if (result.success) {
           comicsCache = result.data;
-          select.innerHTML = '<option value="">Select a comic...</option>';
-          result.data.forEach(comic => {
-            const option = document.createElement('option');
-            option.value = comic._id;
-            option.textContent = `${comic.title} (${comic.slug.current})`;
-            select.appendChild(option);
-          });
+          updateComicSelect();
         } else {
           select.innerHTML = '<option value="">Error loading comics</option>';
         }
@@ -230,9 +266,40 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
         select.innerHTML = '<option value="">Failed to load comics</option>';
       }
     }
+    
+    function updateComicSelect() {
+      const select = document.getElementById('comic-select');
+      const filteredComics = showHiddenOnly 
+        ? comicsCache.filter(c => c.hidden === true)
+        : comicsCache.filter(c => c.hidden !== true);
+      
+      select.innerHTML = '<option value="">Select a comic...</option>';
+      
+      if (filteredComics.length === 0) {
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = showHiddenOnly ? 'No hidden comics' : 'No visible comics';
+        emptyOption.disabled = true;
+        select.appendChild(emptyOption);
+        return;
+      }
+      
+      filteredComics.forEach(comic => {
+        const option = document.createElement('option');
+        option.value = comic._id;
+        const hiddenLabel = comic.hidden ? ' 🙈' : '';
+        option.textContent = `${comic.title} (${comic.slug.current})${hiddenLabel}`;
+        select.appendChild(option);
+      });
+      
+      // Reset form when switching views
+      document.getElementById('modify-comic-form').style.display = 'none';
+    }
 
     const comicSelect = document.getElementById('comic-select');
     const modifyComicForm = document.getElementById('modify-comic-form');
+    const hiddenBadge = document.getElementById('hidden-badge');
+    const toggleHideBtn = document.getElementById('btn-toggle-hide');
     
     comicSelect?.addEventListener('change', (e) => {
       const comicId = e.target.value;
@@ -256,6 +323,18 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
         preview.style.display = 'block';
       } else {
         preview.style.display = 'none';
+      }
+      
+      // Update hidden badge and button
+      if (comic.hidden) {
+        hiddenBadge.style.display = 'block';
+        toggleHideBtn.textContent = '👁️ Unhide';
+        toggleHideBtn.style.background = '#28a745';
+      } else {
+        hiddenBadge.style.display = 'none';
+        toggleHideBtn.textContent = '🙈 Hide';
+        toggleHideBtn.style.background = '#ffc107';
+        toggleHideBtn.style.color = '#000';
       }
       
       modifyComicForm.style.display = 'flex';
@@ -299,6 +378,89 @@ const workerUrl = PUBLIC_WORKER_URL || 'http://localhost:8787';
         }
       } catch (err) {
         modifyResultDiv.innerHTML = `<span style="color: red;">✗ Network error: ${err}</span>`;
+      }
+    });
+
+    // Hide/Unhide functionality
+    toggleHideBtn?.addEventListener('click', async () => {
+      const comicId = document.getElementById('modify-comic-id').value;
+      const comic = comicsCache.find(c => c._id === comicId);
+      if (!comic) return;
+      
+      const newHiddenState = !comic.hidden;
+      modifyResultDiv.innerHTML = newHiddenState ? 'Hiding comic...' : 'Unhiding comic...';
+      
+      try {
+        const response = await fetch(`${workerUrl}/api/comics/${comicId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hidden: newHiddenState }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          modifyResultDiv.innerHTML = `<span style="color: green;">✓ Comic ${newHiddenState ? 'hidden' : 'unhidden'}!</span>`;
+          loadComics();
+          modifyComicForm.style.display = 'none';
+        } else {
+          modifyResultDiv.innerHTML = `<span style="color: red;">✗ Error: ${result.error}</span>`;
+        }
+      } catch (err) {
+        modifyResultDiv.innerHTML = `<span style="color: red;">✗ Network error: ${err}</span>`;
+      }
+    });
+
+    // Delete functionality
+    const deleteBtn = document.getElementById('btn-delete');
+    const deleteModal = document.getElementById('delete-modal');
+    const deleteCancel = document.getElementById('delete-cancel');
+    const deleteConfirm = document.getElementById('delete-confirm');
+    const deleteComicTitle = document.getElementById('delete-comic-title');
+    let comicToDelete = null;
+    
+    deleteBtn?.addEventListener('click', () => {
+      const comicId = document.getElementById('modify-comic-id').value;
+      const comic = comicsCache.find(c => c._id === comicId);
+      if (!comic) return;
+      
+      comicToDelete = comic;
+      deleteComicTitle.textContent = comic.title;
+      deleteModal.style.display = 'flex';
+    });
+    
+    deleteCancel?.addEventListener('click', () => {
+      deleteModal.style.display = 'none';
+      comicToDelete = null;
+    });
+    
+    deleteConfirm?.addEventListener('click', async () => {
+      if (!comicToDelete) return;
+      
+      deleteModal.style.display = 'none';
+      modifyResultDiv.innerHTML = 'Deleting comic permanently...';
+      
+      try {
+        const response = await fetch(`${workerUrl}/api/comics/${comicToDelete._id}`, {
+          method: 'DELETE',
+        });
+        const result = await response.json();
+        if (result.success) {
+          modifyResultDiv.innerHTML = `<span style="color: green;">✓ Comic "${comicToDelete.title}" deleted permanently.</span>`;
+          comicToDelete = null;
+          loadComics();
+          modifyComicForm.style.display = 'none';
+        } else {
+          modifyResultDiv.innerHTML = `<span style="color: red;">✗ Error: ${result.error}</span>`;
+        }
+      } catch (err) {
+        modifyResultDiv.innerHTML = `<span style="color: red;">✗ Network error: ${err}</span>`;
+      }
+    });
+    
+    // Close modal on backdrop click
+    deleteModal?.addEventListener('click', (e) => {
+      if (e.target === deleteModal) {
+        deleteModal.style.display = 'none';
+        comicToDelete = null;
       }
     });
   </script>

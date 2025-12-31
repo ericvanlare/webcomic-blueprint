@@ -47,12 +47,14 @@ const comicFields = `
   publishedAt,
   image,
   altText,
-  transcript
+  transcript,
+  hidden
 `;
 
+// Public queries filter out hidden comics
 export async function getLatestComic(): Promise<ComicWithImageUrl | null> {
   const client = getSanityClient();
-  const query = `*[_type == "comicEpisode"] | order(publishedAt desc)[0] {${comicFields}}`;
+  const query = `*[_type == "comicEpisode" && hidden != true] | order(publishedAt desc)[0] {${comicFields}}`;
   const comic = await client.fetch<Comic | null>(query);
   return comic ? addImageUrl(comic) : null;
 }
@@ -61,7 +63,7 @@ export async function getComicBySlug(
   slug: string
 ): Promise<ComicWithImageUrl | null> {
   const client = getSanityClient();
-  const query = `*[_type == "comicEpisode" && slug.current == $slug][0] {${comicFields}}`;
+  const query = `*[_type == "comicEpisode" && slug.current == $slug && hidden != true][0] {${comicFields}}`;
   const comic = await client.fetch<Comic | null>(query, { slug });
   return comic ? addImageUrl(comic) : null;
 }
@@ -70,7 +72,26 @@ export async function getArchive(
   limit = 50
 ): Promise<ComicWithImageUrl[]> {
   const client = getSanityClient();
+  const query = `*[_type == "comicEpisode" && hidden != true] | order(publishedAt desc)[0..${limit - 1}] {${comicFields}}`;
+  const comics = await client.fetch<Comic[]>(query);
+  return comics.map(addImageUrl);
+}
+
+// Admin queries - include hidden comics
+export async function getAllComicsAdmin(
+  limit = 100
+): Promise<ComicWithImageUrl[]> {
+  const client = getSanityClient();
   const query = `*[_type == "comicEpisode"] | order(publishedAt desc)[0..${limit - 1}] {${comicFields}}`;
+  const comics = await client.fetch<Comic[]>(query);
+  return comics.map(addImageUrl);
+}
+
+export async function getHiddenComics(
+  limit = 100
+): Promise<ComicWithImageUrl[]> {
+  const client = getSanityClient();
+  const query = `*[_type == "comicEpisode" && hidden == true] | order(publishedAt desc)[0..${limit - 1}] {${comicFields}}`;
   const comics = await client.fetch<Comic[]>(query);
   return comics.map(addImageUrl);
 }

@@ -17,6 +17,7 @@ export interface Comic {
   };
   altText?: string;
   transcript?: string;
+  hidden?: boolean;
 }
 
 // For displaying comics (with resolved image URL)
@@ -40,6 +41,7 @@ export interface PatchComicBody {
   publishedAt?: string;
   altText?: string;
   transcript?: string;
+  hidden?: boolean;
 }
 
 // API response types

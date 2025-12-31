@@ -69,6 +69,13 @@ export const comicEpisode = defineType({
       type: 'text',
       description: 'Text transcript of the comic for accessibility',
     }),
+    defineField({
+      name: 'hidden',
+      title: 'Hidden',
+      type: 'boolean',
+      description: 'Hide this comic from the public site',
+      initialValue: false,
+    }),
   ],
   preview: {
     select: {
