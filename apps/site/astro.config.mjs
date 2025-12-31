@@ -37,6 +37,11 @@ export default defineConfig({
         access: 'public',
         optional: true,
       }),
+      CF_ANALYTICS_TOKEN: envField.string({
+        context: 'server',
+        access: 'public',
+        optional: true,
+      }),
     },
   },
 });
