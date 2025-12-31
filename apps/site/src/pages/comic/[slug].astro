@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { getComicBySlug } from '@/lib/sanity';
+import { getComicBySlug, getAdjacentComics } from '@/lib/sanity';
 
 const { slug } = Astro.params;
 
@@ -13,6 +13,8 @@ const comic = await getComicBySlug(slug);
 if (!comic) {
   return new Response('Comic not found', { status: 404 });
 }
+
+const { prev, next } = await getAdjacentComics(comic.publishedAt);
 ---
 
 <BaseLayout title={comic.title}>
@@ -36,8 +38,80 @@ if (!comic) {
         </details>
       )
     }
-    <p style="margin-top: 1rem;">
-      <a href="/">&larr; Latest</a> | <a href="/archive">Archive</a>
-    </p>
+    
+    <nav class="comic-nav">
+      <div class="nav-prev">
+        {prev ? (
+          <a href={`/comic/${prev.slug.current}`} title={prev.title}>
+            &larr; Previous
+          </a>
+        ) : (
+          <span class="nav-disabled">&larr; Previous</span>
+        )}
+      </div>
+      
+      <div class="nav-center">
+        <a href="/">Latest</a>
+        <span class="nav-separator">|</span>
+        <a href="/archive">Archive</a>
+      </div>
+      
+      <div class="nav-next">
+        {next ? (
+          <a href={`/comic/${next.slug.current}`} title={next.title}>
+            Next &rarr;
+          </a>
+        ) : (
+          <span class="nav-disabled">Next &rarr;</span>
+        )}
+      </div>
+    </nav>
   </article>
 </BaseLayout>
+
+<style>
+  .comic-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding: 1rem 0;
+    border-top: 1px solid #eee;
+  }
+  
+  .nav-prev, .nav-next {
+    min-width: 100px;
+  }
+  
+  .nav-prev {
+    text-align: left;
+  }
+  
+  .nav-next {
+    text-align: right;
+  }
+  
+  .nav-center {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  
+  .nav-separator {
+    color: #ccc;
+  }
+  
+  .nav-disabled {
+    color: #ccc;
+    cursor: default;
+  }
+  
+  .comic-nav a {
+    text-decoration: none;
+    color: #0066cc;
+  }
+  
+  .comic-nav a:hover {
+    text-decoration: underline;
+  }
+</style>

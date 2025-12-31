@@ -1,8 +1,9 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { getLatestComic } from '@/lib/sanity';
+import { getLatestComic, getAdjacentComics } from '@/lib/sanity';
 
 const comic = await getLatestComic();
+const adjacent = comic ? await getAdjacentComics(comic.publishedAt) : null;
 ---
 
 <BaseLayout title="Latest Comic">
@@ -26,9 +27,72 @@ const comic = await getLatestComic();
             </pre>
           </details>
         )}
+        
+        <nav class="comic-nav">
+          <div class="nav-prev">
+            {adjacent?.prev ? (
+              <a href={`/comic/${adjacent.prev.slug.current}`} title={adjacent.prev.title}>
+                &larr; Previous
+              </a>
+            ) : (
+              <span class="nav-disabled">&larr; Previous</span>
+            )}
+          </div>
+          
+          <div class="nav-center">
+            <a href="/archive">Archive</a>
+          </div>
+          
+          <div class="nav-next">
+            <span class="nav-disabled">Next &rarr;</span>
+          </div>
+        </nav>
       </article>
     ) : (
       <p>No comics yet. Use the admin panel to upload your first comic!</p>
     )
   }
 </BaseLayout>
+
+<style>
+  .comic-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding: 1rem 0;
+    border-top: 1px solid #eee;
+  }
+  
+  .nav-prev, .nav-next {
+    min-width: 100px;
+  }
+  
+  .nav-prev {
+    text-align: left;
+  }
+  
+  .nav-next {
+    text-align: right;
+  }
+  
+  .nav-center {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  
+  .nav-disabled {
+    color: #ccc;
+    cursor: default;
+  }
+  
+  .comic-nav a {
+    text-decoration: none;
+    color: #0066cc;
+  }
+  
+  .comic-nav a:hover {
+    text-decoration: underline;
+  }
+</style>
